@@ -1,0 +1,49 @@
+services:
+  db:
+    image: mysql:8.0
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wordpress
+      MYSQL_PASSWORD: wordpress
+      MYSQL_ROOT_PASSWORD: root
+    volumes:
+      - db_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+
+  wp:
+    image: wordpress:php8.2-apache
+    depends_on:
+      - db
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_NAME: wordpress
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: wordpress
+    ports:
+      - "8080:80"
+    volumes:
+      - ./wp-content:/var/www/html/wp-content
+      - wp_data:/var/www/html
+    restart: always
+
+  wpcli:
+    image: wordpress:cli
+    depends_on:
+      - wp
+    volumes:
+      - ./wp-content:/var/www/html/wp-content
+      - wp_data:/var/www/html
+    entrypoint: [ "sh", "-c" ]
+    command: >
+      "sleep 12 &&
+       wp core install --url=http://localhost:8080 --title=InclusiveQuest --admin_user=admin --admin_password=admin --admin_email=admin@example.com --skip-email --path=/var/www/html || true &&
+       wp plugin activate inclusivequest-core --path=/var/www/html || true &&
+       wp theme activate inclusivequest --path=/var/www/html || true &&
+       echo 'Ready.' &&
+       tail -f /dev/null"
+
+volumes:
+  db_data:
+  wp_data:
